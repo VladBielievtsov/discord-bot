@@ -157,3 +157,20 @@ func UserPromptHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 		s.ChannelMessageSend(channel.ID, "We're still waiting... 😅")
 	}
 }
+
+func HelpHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
+	fields := []*discordgo.MessageEmbedField{
+		{
+			Name:  "Everyone commands",
+			Value: "`help` `rand` `Hello` `proverbs` `prompt` `answers`",
+		},
+	}
+
+	embed := discordgo.MessageEmbed{
+		Title:  "Help Command",
+		Fields: fields,
+		Color:  1,
+	}
+
+	s.ChannelMessageSendEmbed(m.ChannelID, &embed)
+}
