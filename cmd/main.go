@@ -28,7 +28,7 @@ var images = [8]string{
 	"https://i.pinimg.com/564x/e9/f8/dc/e9f8dc62e3ad3053ca9aa195edd72016.jpg",
 }
 
-const prefix string = ".cat"
+const prefix string = "/cat"
 
 func main() {
 	err := godotenv.Load()
