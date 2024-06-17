@@ -162,7 +162,7 @@ func HelpHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	fields := []*discordgo.MessageEmbedField{
 		{
 			Name:  "Everyone commands",
-			Value: "`help` `rand` `Hello` `proverbs` `prompt` `answers`",
+			Value: "`help` `rand` `hello` `proverbs` `prompt` `answers`",
 		},
 	}
 

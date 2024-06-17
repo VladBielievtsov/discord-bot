@@ -69,7 +69,7 @@ func main() {
 
 		args := strings.Split(m.Content, " ")
 
-		if len(args) < 2 {
+		if len(args) < 2 && args[0] == prefix {
 			s.ChannelMessageSend(m.ChannelID, "Enter `.cat help` to see all commands")
 			return
 		}
@@ -78,7 +78,7 @@ func main() {
 			return
 		}
 
-		if args[1] == "Hello" {
+		if args[1] == "hello" {
 			handlers.HelloWorldHandler(s, m)
 		}
 
