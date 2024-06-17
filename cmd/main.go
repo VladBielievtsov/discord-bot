@@ -31,6 +31,12 @@ func main() {
 	utils.ErrorHandler(err)
 	defer sess.Close()
 
+	guildID := os.Getenv("Guild_ID")
+	if guildID == "" {
+		fmt.Println("Guild_ID is not set in the environment variables")
+		return
+	}
+
 	commands := []*discordgo.ApplicationCommand{
 		{
 			Name:        "hello",
@@ -60,19 +66,30 @@ func main() {
 		},
 	}
 
-	guildID := os.Getenv("Guild_ID")
-
 	for _, v := range commands {
 		_, err := sess.ApplicationCommandCreate(sess.State.User.ID, guildID, v)
 		utils.ErrorHandler(err)
 	}
 
 	sess.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-		switch i.ApplicationCommandData().Name {
-		case "hello":
-			handlers.HelloHandler(s, i)
+		switch i.Type {
+		case discordgo.InteractionMessageComponent:
+			handlers.HandleButtonInteraction(s, i)
+		case discordgo.InteractionApplicationCommand:
+			switch i.ApplicationCommandData().Name {
+			case "hello":
+				handlers.HelloHandler(s, i)
+			case "hangman":
+				handlers.HangmanGame(s, i)
+			}
 		}
 	})
+
+	// sess.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	// 	if i.Type == discordgo.InteractionMessageComponent {
+	// 		handlers.HandleButtonInteraction(s, i)
+	// 	}
+	// })
 
 	sess.Identify.Intents = discordgo.IntentsAllWithoutPrivileged
 
