@@ -36,6 +36,28 @@ func main() {
 			Name:        "hello",
 			Description: "Say hello",
 		},
+		{
+			Name:        "hangman",
+			Description: "Play Hangman",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "language",
+					Description: "Select a language",
+					Required:    true,
+					Choices: []*discordgo.ApplicationCommandOptionChoice{
+						{
+							Name:  "English",
+							Value: "en",
+						},
+						{
+							Name:  "Ukraine",
+							Value: "ua",
+						},
+					},
+				},
+			},
+		},
 	}
 
 	guildID := os.Getenv("Guild_ID")
