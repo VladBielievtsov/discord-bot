@@ -110,7 +110,7 @@ func main() {
 	utils.ErrorHandler(err)
 	defer sess.Close()
 
-	fmt.Println("The bot is Online!")
+	fmt.Println("The bot is Online! Press CTRL+C to exit.")
 
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
