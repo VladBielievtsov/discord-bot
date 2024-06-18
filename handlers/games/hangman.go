@@ -19,37 +19,44 @@ var desc = [6]string{
 }
 
 var (
-	buttons = []discordgo.MessageComponent{
-		discordgo.Button{
-			Label:    "A",
-			Style:    discordgo.PrimaryButton,
-			CustomID: "A",
-		},
-		discordgo.Button{
-			Label:    "B",
-			Style:    discordgo.PrimaryButton,
-			CustomID: "B",
-		},
-		discordgo.Button{
-			Label:    "C",
-			Style:    discordgo.PrimaryButton,
-			CustomID: "C",
-		},
-		discordgo.Button{
-			Label:    "D",
-			Style:    discordgo.PrimaryButton,
-			CustomID: "D",
-		},
-		discordgo.Button{
-			Label:    "Stop",
-			Style:    discordgo.DangerButton,
-			CustomID: "Stop",
+	letters    = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	buttons    = generateButtons(letters)
+	stopButton = discordgo.Button{
+		Label:    "Stop",
+		Style:    discordgo.DangerButton,
+		CustomID: "Stop",
+	}
+	nextButton = discordgo.Button{
+		Style:    discordgo.SuccessButton,
+		CustomID: "Next",
+		Emoji: &discordgo.ComponentEmoji{
+			Name: "➡️",
 		},
 	}
+	prevButton = discordgo.Button{
+		Style:    discordgo.SuccessButton,
+		CustomID: "Prev",
+		Emoji: &discordgo.ComponentEmoji{
+			Name: "⬅️",
+		},
+	}
+	currentState   = "firstButtons"
 	guessedLetters = []string{}
 	steps          = 0
 	word           string
 )
+
+func generateButtons(letters string) []discordgo.MessageComponent {
+	var buttons []discordgo.MessageComponent
+	for _, letter := range letters {
+		buttons = append(buttons, discordgo.Button{
+			Label:    string(letter),
+			Style:    discordgo.PrimaryButton,
+			CustomID: string(letter),
+		})
+	}
+	return buttons
+}
 
 func HangmanGame(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	selectedLang := i.ApplicationCommandData().Options[0].StringValue()
@@ -58,10 +65,8 @@ func HangmanGame(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 	blanks := []string{}
 	for range word {
-		blanks = append(blanks, "🔵")
+		blanks = append(blanks, "🔵 ")
 	}
-
-	fmt.Println(word)
 
 	var embed discordgo.MessageEmbed
 
@@ -100,18 +105,52 @@ func HangmanGame(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	response := &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
-			Embeds: []*discordgo.MessageEmbed{&embed},
-			Components: []discordgo.MessageComponent{
-				discordgo.ActionsRow{
-					Components: buttons,
-				},
-			},
+			Embeds:     []*discordgo.MessageEmbed{&embed},
+			Components: generateFirstButtons(),
 		},
 	}
 
 	err := s.InteractionRespond(i.Interaction, response)
 	if err != nil {
 		log.Printf("Error responding to interaction: %v", err)
+	}
+}
+
+func generateFirstButtons() []discordgo.MessageComponent {
+	return []discordgo.MessageComponent{
+		discordgo.ActionsRow{
+			Components: buttons[:4],
+		},
+		discordgo.ActionsRow{
+			Components: buttons[4:8],
+		},
+		discordgo.ActionsRow{
+			Components: buttons[8:12],
+		},
+		discordgo.ActionsRow{
+			Components: []discordgo.MessageComponent{
+				nextButton, stopButton,
+			},
+		},
+	}
+}
+
+func generateSecondButtons() []discordgo.MessageComponent {
+	return []discordgo.MessageComponent{
+		discordgo.ActionsRow{
+			Components: buttons[12:16],
+		},
+		discordgo.ActionsRow{
+			Components: buttons[16:20],
+		},
+		discordgo.ActionsRow{
+			Components: buttons[20:24],
+		},
+		discordgo.ActionsRow{
+			Components: []discordgo.MessageComponent{
+				prevButton, stopButton, buttons[24], buttons[25],
+			},
+		},
 	}
 }
 
@@ -162,6 +201,13 @@ func HandleButtonInteraction(s *discordgo.Session, i *discordgo.InteractionCreat
 			}
 		case "Stop":
 			Lost(s, i)
+		case "Next":
+			switch currentState {
+			case "firstButtons":
+
+			case "secondButtons":
+				fmt.Println("Already in the second button state, handle accordingly")
+			}
 		default:
 			fmt.Printf("Unhandled button click with ID %s\n", customID)
 		}
