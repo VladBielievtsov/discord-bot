@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"go-discord-bot/handlers"
+	"go-discord-bot/handlers/games"
 	"go-discord-bot/utils"
 	"os"
 	"os/signal"
@@ -74,13 +75,13 @@ func main() {
 	sess.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		switch i.Type {
 		case discordgo.InteractionMessageComponent:
-			handlers.HandleButtonInteraction(s, i)
+			games.HandleButtonInteraction(s, i)
 		case discordgo.InteractionApplicationCommand:
 			switch i.ApplicationCommandData().Name {
 			case "hello":
 				handlers.HelloHandler(s, i)
 			case "hangman":
-				handlers.HangmanGame(s, i)
+				games.HangmanGame(s, i)
 			}
 		}
 	})
