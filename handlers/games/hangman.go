@@ -89,8 +89,9 @@ func HangmanGame(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		}
 	case "ua":
 		embed = discordgo.MessageEmbed{
-			Title: "Гра у Вісіліцю",
-			Color: 0xFFA500,
+			Title:       "Гра у Вісіліцю",
+			Color:       0xFFA500,
+			Description: "Українська версія ще не готова",
 		}
 	default:
 		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -191,7 +192,7 @@ func HandleButtonInteraction(s *discordgo.Session, i *discordgo.InteractionCreat
 					Embeds: []*discordgo.MessageEmbed{&embed},
 					Components: []discordgo.MessageComponent{
 						discordgo.ActionsRow{
-							Components: buttons,
+							Components: generateFirstButtons(),
 						},
 					},
 				},
@@ -204,7 +205,20 @@ func HandleButtonInteraction(s *discordgo.Session, i *discordgo.InteractionCreat
 		case "Next":
 			switch currentState {
 			case "firstButtons":
+				err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseUpdateMessage,
+					Data: &discordgo.InteractionResponseData{
+						Components: []discordgo.MessageComponent{
+							discordgo.ActionsRow{
+								Components: generateSecondButtons(),
+							},
+						},
+					},
+				})
 
+				if err != nil {
+					log.Printf("Error updating message: %v", err)
+				}
 			case "secondButtons":
 				fmt.Println("Already in the second button state, handle accordingly")
 			}
