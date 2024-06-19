@@ -44,26 +44,14 @@ var (
 	guessedLetters = []string{}
 	steps          = 0
 	word           string
+	blanks         = []string{}
 )
-
-func generateButtons(letters string) []discordgo.MessageComponent {
-	var buttons []discordgo.MessageComponent
-	for _, letter := range letters {
-		buttons = append(buttons, discordgo.Button{
-			Label:    string(letter),
-			Style:    discordgo.PrimaryButton,
-			CustomID: string(letter),
-		})
-	}
-	return buttons
-}
 
 func HangmanGame(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	selectedLang := i.ApplicationCommandData().Options[0].StringValue()
 
 	word = Words[rand.Intn(len(Words))]
 
-	blanks := []string{}
 	for range word {
 		blanks = append(blanks, "🔵 ")
 	}
@@ -115,6 +103,18 @@ func HangmanGame(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if err != nil {
 		log.Printf("Error responding to interaction: %v", err)
 	}
+}
+
+func generateButtons(letters string) []discordgo.MessageComponent {
+	var buttons []discordgo.MessageComponent
+	for _, letter := range letters {
+		buttons = append(buttons, discordgo.Button{
+			Label:    string(letter),
+			Style:    discordgo.PrimaryButton,
+			CustomID: string(letter),
+		})
+	}
+	return buttons
 }
 
 func generateFirstButtons() []discordgo.MessageComponent {
@@ -205,21 +205,69 @@ func HandleButtonInteraction(s *discordgo.Session, i *discordgo.InteractionCreat
 		case "Next":
 			switch currentState {
 			case "firstButtons":
+				currentState = "secondButtons"
+
+				embed := discordgo.MessageEmbed{
+					Author: &discordgo.MessageEmbedAuthor{
+						Name:    i.Member.User.Username,
+						IconURL: i.Member.User.AvatarURL(""),
+					},
+					Title:       "Hangman",
+					Color:       0xFFA500,
+					Description: desc[steps],
+					Fields: []*discordgo.MessageEmbedField{
+						{
+							Name:  fmt.Sprintf("Word (%d)", len(word)),
+							Value: strings.Join(blanks, ""),
+						},
+					},
+				}
+
 				err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 					Type: discordgo.InteractionResponseUpdateMessage,
 					Data: &discordgo.InteractionResponseData{
-						Components: []discordgo.MessageComponent{
-							discordgo.ActionsRow{
-								Components: generateSecondButtons(),
-							},
-						},
+						Embeds:     []*discordgo.MessageEmbed{&embed},
+						Components: generateSecondButtons(),
 					},
 				})
-
 				if err != nil {
 					log.Printf("Error updating message: %v", err)
 				}
 			case "secondButtons":
+				fmt.Println("Already in the second button state, handle accordingly")
+			}
+		case "Prev":
+			switch currentState {
+			case "secondButtons":
+				currentState = "firstButtons"
+
+				embed := discordgo.MessageEmbed{
+					Author: &discordgo.MessageEmbedAuthor{
+						Name:    i.Member.User.Username,
+						IconURL: i.Member.User.AvatarURL(""),
+					},
+					Title:       "Hangman",
+					Color:       0xFFA500,
+					Description: desc[steps],
+					Fields: []*discordgo.MessageEmbedField{
+						{
+							Name:  fmt.Sprintf("Word (%d)", len(word)),
+							Value: strings.Join(blanks, ""),
+						},
+					},
+				}
+
+				err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseUpdateMessage,
+					Data: &discordgo.InteractionResponseData{
+						Embeds:     []*discordgo.MessageEmbed{&embed},
+						Components: generateFirstButtons(),
+					},
+				})
+				if err != nil {
+					log.Printf("Error updating message: %v", err)
+				}
+			case "firstButtons":
 				fmt.Println("Already in the second button state, handle accordingly")
 			}
 		default:
