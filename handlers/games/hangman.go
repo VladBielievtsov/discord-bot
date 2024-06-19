@@ -7,15 +7,16 @@ import (
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/enescakir/emoji"
 )
 
 var desc = [6]string{
-	"```|‾‾‾‾‾‾|\n|\n|\n|\n|\n|\n|\n|__________                      ```",
-	"```|‾‾‾‾‾‾|\n|      🎩 \n|\n|\n|\n|\n|\n|__________                      ```",
-	"```|‾‾‾‾‾‾|\n|      🎩 \n|      🙄 \n|\n|\n|\n|\n|__________                      ```",
-	"```|‾‾‾‾‾‾|\n|      🎩 \n|      😟 \n|      👕 \n|\n|\n|\n|__________                      ```",
-	"```|‾‾‾‾‾‾|\n|      🎩 \n|      😧 \n|      👕 \n|      🩳 \n|\n|\n|__________                      ```",
 	"```|‾‾‾‾‾‾|\n|      🎩 \n|      😵 \n|      👕 \n|      🩳 \n|     👞👞 \n|\n|__________                      ```",
+	"```|‾‾‾‾‾‾|\n|      🎩 \n|      😧 \n|      👕 \n|      🩳 \n|\n|\n|__________                      ```",
+	"```|‾‾‾‾‾‾|\n|      🎩 \n|      😟 \n|      👕 \n|\n|\n|\n|__________                      ```",
+	"```|‾‾‾‾‾‾|\n|      🎩 \n|      🙄 \n|\n|\n|\n|\n|__________                      ```",
+	"```|‾‾‾‾‾‾|\n|      🎩 \n|\n|\n|\n|\n|\n|__________                      ```",
+	"```|‾‾‾‾‾‾|\n|\n|\n|\n|\n|\n|\n|__________                      ```",
 }
 
 var (
@@ -42,15 +43,20 @@ var (
 	}
 	currentState   = "firstButtons"
 	guessedLetters = []string{}
-	steps          = 0
+	lives          = 5
 	word           string
 	blanks         = []string{}
+	words          = []string{"golang", "js", "php"}
 )
 
 func HangmanGame(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	selectedLang := i.ApplicationCommandData().Options[0].StringValue()
 
-	word = Words[rand.Intn(len(Words))]
+	lives = 5
+	blanks = []string{}
+	guessedLetters = []string{}
+
+	word = words[rand.Intn(len(words))]
 
 	for range word {
 		blanks = append(blanks, "🔵 ")
@@ -67,7 +73,7 @@ func HangmanGame(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			},
 			Title:       "Hangman",
 			Color:       0xFFA500,
-			Description: desc[steps],
+			Description: desc[lives],
 			Fields: []*discordgo.MessageEmbedField{
 				{
 					Name:  fmt.Sprintf("Word (%d)", len(word)),
@@ -160,46 +166,6 @@ func HandleButtonInteraction(s *discordgo.Session, i *discordgo.InteractionCreat
 		customID := i.MessageComponentData().CustomID
 
 		switch customID {
-		case "A", "B", "C", "D":
-			guessedLetters = append(guessedLetters, customID)
-
-			steps = steps + 1
-
-			if steps == len(desc)-1 {
-				Lost(s, i)
-				return
-			}
-
-			embed := discordgo.MessageEmbed{
-				Author: &discordgo.MessageEmbedAuthor{
-					Name:    i.Member.User.Username,
-					IconURL: i.Member.User.AvatarURL(""),
-				},
-				Title:       "Hangman",
-				Color:       0xFFA500,
-				Description: desc[steps],
-				Fields: []*discordgo.MessageEmbedField{
-					{
-						Name:  "Letters Guessed",
-						Value: fmt.Sprintf("`%s`", strings.Join(guessedLetters, ", ")),
-					},
-				},
-			}
-
-			err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseUpdateMessage,
-				Data: &discordgo.InteractionResponseData{
-					Embeds: []*discordgo.MessageEmbed{&embed},
-					Components: []discordgo.MessageComponent{
-						discordgo.ActionsRow{
-							Components: generateFirstButtons(),
-						},
-					},
-				},
-			})
-			if err != nil {
-				log.Printf("Error updating message: %v", err)
-			}
 		case "Stop":
 			Lost(s, i)
 		case "Next":
@@ -214,7 +180,7 @@ func HandleButtonInteraction(s *discordgo.Session, i *discordgo.InteractionCreat
 					},
 					Title:       "Hangman",
 					Color:       0xFFA500,
-					Description: desc[steps],
+					Description: desc[lives],
 					Fields: []*discordgo.MessageEmbedField{
 						{
 							Name:  fmt.Sprintf("Word (%d)", len(word)),
@@ -248,7 +214,7 @@ func HandleButtonInteraction(s *discordgo.Session, i *discordgo.InteractionCreat
 					},
 					Title:       "Hangman",
 					Color:       0xFFA500,
-					Description: desc[steps],
+					Description: desc[lives],
 					Fields: []*discordgo.MessageEmbedField{
 						{
 							Name:  fmt.Sprintf("Word (%d)", len(word)),
@@ -271,7 +237,53 @@ func HandleButtonInteraction(s *discordgo.Session, i *discordgo.InteractionCreat
 				fmt.Println("Already in the second button state, handle accordingly")
 			}
 		default:
-			fmt.Printf("Unhandled button click with ID %s\n", customID)
+			if len(customID) == 1 && customID[0] >= 'A' && customID[0] <= 'Z' {
+				guessedLetters = append(guessedLetters, customID)
+
+				for i, wordLetter := range word {
+					if strings.ToLower(customID) == string(wordLetter) {
+						blanks[i] = emoji.Parse(":regional_indicator_" + strings.ToLower(customID) + ":")
+					}
+				}
+
+				// if lives == len(desc)-1 {
+				// 	Lost(s, i)
+				// 	return
+				// }
+
+				embed := discordgo.MessageEmbed{
+					Author: &discordgo.MessageEmbedAuthor{
+						Name:    i.Member.User.Username,
+						IconURL: i.Member.User.AvatarURL(""),
+					},
+					Title:       "Hangman",
+					Color:       0xFFA500,
+					Description: desc[lives],
+					Fields: []*discordgo.MessageEmbedField{
+						{
+							Name:  "Letters Guessed",
+							Value: fmt.Sprintf("`%s`, lives: %d", strings.Join(guessedLetters, ", "), lives),
+						},
+						{
+							Name:  fmt.Sprintf("Word (%d)", len(word)),
+							Value: strings.Join(blanks, ""),
+						},
+					},
+				}
+
+				err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseUpdateMessage,
+					Data: &discordgo.InteractionResponseData{
+						Embeds:     []*discordgo.MessageEmbed{&embed},
+						Components: generateFirstButtons(),
+					},
+				})
+				if err != nil {
+					log.Printf("Error updating message: %v", err)
+				}
+			} else {
+				fmt.Printf("Unhandled button click with ID %s\n", customID)
+			}
 		}
 	}
 }
@@ -284,7 +296,7 @@ func Lost(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		},
 		Title:       "Hangman",
 		Color:       0xFFA500,
-		Description: desc[steps],
+		Description: desc[lives],
 		Fields: []*discordgo.MessageEmbedField{
 			{
 				Name:  "Letters Guessed",
