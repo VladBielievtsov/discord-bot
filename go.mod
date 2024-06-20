@@ -3,6 +3,7 @@ module go-discord-bot
 go 1.22.4
 
 require (
+	github.com/Knetic/govaluate v3.0.0+incompatible // indirect
 	github.com/bwmarrin/discordgo v0.28.1 // indirect
 	github.com/enescakir/emoji v1.0.0 // indirect
 	github.com/gorilla/websocket v1.4.2 // indirect

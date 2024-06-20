@@ -65,6 +65,18 @@ func main() {
 				},
 			},
 		},
+		{
+			Name:        "calculate",
+			Description: "Calculate a math expression",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "expression",
+					Description: "The math expression to calculate",
+					Required:    true,
+				},
+			},
+		},
 	}
 
 	for _, v := range commands {
@@ -82,15 +94,11 @@ func main() {
 				handlers.HelloHandler(s, i)
 			case "hangman":
 				games.HangmanGame(s, i)
+			case "calculate":
+				handlers.CalcHandler(s, i)
 			}
 		}
 	})
-
-	// sess.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	// 	if i.Type == discordgo.InteractionMessageComponent {
-	// 		handlers.HandleButtonInteraction(s, i)
-	// 	}
-	// })
 
 	sess.Identify.Intents = discordgo.IntentsAllWithoutPrivileged
 
