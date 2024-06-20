@@ -41,12 +41,13 @@ var (
 			Name: "⬅️",
 		},
 	}
-	currentState   = "firstButtons"
-	guessedLetters = []string{}
-	lives          = 5
-	word           string
-	blanks         = []string{}
-	words          = []string{"golang", "js", "php"}
+	currentState          = "firstButtons"
+	guessedLetters        = []string{}
+	lives                 = 5
+	word                  string
+	correctGuessedLetters = []string{}
+	blanks                = []string{}
+	words                 = []string{"golang", "js", "php"}
 )
 
 func HangmanGame(s *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -55,32 +56,26 @@ func HangmanGame(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	lives = 5
 	blanks = []string{}
 	guessedLetters = []string{}
+	correctGuessedLetters = []string{}
+	currentState = "firstButtons"
 
 	word = words[rand.Intn(len(words))]
 
 	for range word {
 		blanks = append(blanks, "🔵 ")
+		correctGuessedLetters = append(correctGuessedLetters, "_")
 	}
 
 	var embed discordgo.MessageEmbed
 
 	switch selectedLang {
 	case "en":
-		embed = discordgo.MessageEmbed{
-			Author: &discordgo.MessageEmbedAuthor{
-				Name:    i.Member.User.Username,
-				IconURL: i.Member.User.AvatarURL(""),
+		embed = generateEmbed(i, []*discordgo.MessageEmbedField{
+			{
+				Name:  fmt.Sprintf("Word (%d)", len(word)),
+				Value: strings.Join(blanks, ""),
 			},
-			Title:       "Hangman",
-			Color:       0xFFA500,
-			Description: desc[lives],
-			Fields: []*discordgo.MessageEmbedField{
-				{
-					Name:  fmt.Sprintf("Word (%d)", len(word)),
-					Value: strings.Join(blanks, ""),
-				},
-			},
-		}
+		})
 	case "ua":
 		embed = discordgo.MessageEmbed{
 			Title:       "Гра у Вісіліцю",
@@ -161,6 +156,19 @@ func generateSecondButtons() []discordgo.MessageComponent {
 	}
 }
 
+func generateEmbed(i *discordgo.InteractionCreate, fields []*discordgo.MessageEmbedField) discordgo.MessageEmbed {
+	return discordgo.MessageEmbed{
+		Author: &discordgo.MessageEmbedAuthor{
+			Name:    i.Member.User.Username,
+			IconURL: i.Member.User.AvatarURL(""),
+		},
+		Title:       "Hangman",
+		Color:       0xFFA500,
+		Description: desc[lives],
+		Fields:      fields,
+	}
+}
+
 func HandleButtonInteraction(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if i.Type == discordgo.InteractionMessageComponent {
 		customID := i.MessageComponentData().CustomID
@@ -173,21 +181,16 @@ func HandleButtonInteraction(s *discordgo.Session, i *discordgo.InteractionCreat
 			case "firstButtons":
 				currentState = "secondButtons"
 
-				embed := discordgo.MessageEmbed{
-					Author: &discordgo.MessageEmbedAuthor{
-						Name:    i.Member.User.Username,
-						IconURL: i.Member.User.AvatarURL(""),
+				embed := generateEmbed(i, []*discordgo.MessageEmbedField{
+					{
+						Name:  "Letters Guessed",
+						Value: fmt.Sprintf("`%s`", strings.Join(guessedLetters, ", ")),
 					},
-					Title:       "Hangman",
-					Color:       0xFFA500,
-					Description: desc[lives],
-					Fields: []*discordgo.MessageEmbedField{
-						{
-							Name:  fmt.Sprintf("Word (%d)", len(word)),
-							Value: strings.Join(blanks, ""),
-						},
+					{
+						Name:  fmt.Sprintf("Word (%d)", len(word)),
+						Value: strings.Join(blanks, ""),
 					},
-				}
+				})
 
 				err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 					Type: discordgo.InteractionResponseUpdateMessage,
@@ -207,21 +210,16 @@ func HandleButtonInteraction(s *discordgo.Session, i *discordgo.InteractionCreat
 			case "secondButtons":
 				currentState = "firstButtons"
 
-				embed := discordgo.MessageEmbed{
-					Author: &discordgo.MessageEmbedAuthor{
-						Name:    i.Member.User.Username,
-						IconURL: i.Member.User.AvatarURL(""),
+				embed := generateEmbed(i, []*discordgo.MessageEmbedField{
+					{
+						Name:  "Letters Guessed",
+						Value: fmt.Sprintf("`%s`", strings.Join(guessedLetters, ", ")),
 					},
-					Title:       "Hangman",
-					Color:       0xFFA500,
-					Description: desc[lives],
-					Fields: []*discordgo.MessageEmbedField{
-						{
-							Name:  fmt.Sprintf("Word (%d)", len(word)),
-							Value: strings.Join(blanks, ""),
-						},
+					{
+						Name:  fmt.Sprintf("Word (%d)", len(word)),
+						Value: strings.Join(blanks, ""),
 					},
-				}
+				})
 
 				err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 					Type: discordgo.InteractionResponseUpdateMessage,
@@ -239,48 +237,84 @@ func HandleButtonInteraction(s *discordgo.Session, i *discordgo.InteractionCreat
 		default:
 			if len(customID) == 1 && customID[0] >= 'A' && customID[0] <= 'Z' {
 				guessedLetters = append(guessedLetters, customID)
-
+				correctGuess := false
 				for i, wordLetter := range word {
 					if strings.ToLower(customID) == string(wordLetter) {
 						blanks[i] = emoji.Parse(":regional_indicator_" + strings.ToLower(customID) + ":")
+						correctGuessedLetters[i] = strings.ToLower(customID)
+						correctGuess = true
 					}
 				}
 
-				// if lives == len(desc)-1 {
-				// 	Lost(s, i)
-				// 	return
-				// }
+				if !correctGuess {
+					lives--
+				}
 
-				embed := discordgo.MessageEmbed{
-					Author: &discordgo.MessageEmbedAuthor{
-						Name:    i.Member.User.Username,
-						IconURL: i.Member.User.AvatarURL(""),
-					},
-					Title:       "Hangman",
-					Color:       0xFFA500,
-					Description: desc[lives],
-					Fields: []*discordgo.MessageEmbedField{
+				if lives == 0 {
+					Lost(s, i)
+					return
+				}
+
+				if strings.Join(correctGuessedLetters, "") == word {
+					embed := generateEmbed(i, []*discordgo.MessageEmbedField{
 						{
 							Name:  "Letters Guessed",
-							Value: fmt.Sprintf("`%s`, lives: %d", strings.Join(guessedLetters, ", "), lives),
+							Value: fmt.Sprintf("`%s`", strings.Join(guessedLetters, ", ")),
 						},
 						{
-							Name:  fmt.Sprintf("Word (%d)", len(word)),
-							Value: strings.Join(blanks, ""),
+							Name:  "Game Over",
+							Value: fmt.Sprintf("You won! The word was **%s**.", word),
 						},
-					},
+					})
+
+					err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseUpdateMessage,
+						Data: &discordgo.InteractionResponseData{
+							Embeds: []*discordgo.MessageEmbed{&embed},
+						},
+					})
+					if err != nil {
+						log.Printf("Error updating message: %v", err)
+					}
+					return
 				}
 
-				err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-					Type: discordgo.InteractionResponseUpdateMessage,
-					Data: &discordgo.InteractionResponseData{
-						Embeds:     []*discordgo.MessageEmbed{&embed},
-						Components: generateFirstButtons(),
+				embed := generateEmbed(i, []*discordgo.MessageEmbedField{
+					{
+						Name:  "Letters Guessed",
+						Value: fmt.Sprintf("`%s`", strings.Join(guessedLetters, ", ")),
+					},
+					{
+						Name:  fmt.Sprintf("Word (%d)", len(word)),
+						Value: strings.Join(blanks, ""),
 					},
 				})
-				if err != nil {
-					log.Printf("Error updating message: %v", err)
+
+				switch currentState {
+				case "firstButtons":
+					err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseUpdateMessage,
+						Data: &discordgo.InteractionResponseData{
+							Embeds:     []*discordgo.MessageEmbed{&embed},
+							Components: generateFirstButtons(),
+						},
+					})
+					if err != nil {
+						log.Printf("Error updating message: %v", err)
+					}
+				case "secondButtons":
+					err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+						Type: discordgo.InteractionResponseUpdateMessage,
+						Data: &discordgo.InteractionResponseData{
+							Embeds:     []*discordgo.MessageEmbed{&embed},
+							Components: generateSecondButtons(),
+						},
+					})
+					if err != nil {
+						log.Printf("Error updating message: %v", err)
+					}
 				}
+
 			} else {
 				fmt.Printf("Unhandled button click with ID %s\n", customID)
 			}
@@ -289,25 +323,16 @@ func HandleButtonInteraction(s *discordgo.Session, i *discordgo.InteractionCreat
 }
 
 func Lost(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	embed := discordgo.MessageEmbed{
-		Author: &discordgo.MessageEmbedAuthor{
-			Name:    i.Member.User.Username,
-			IconURL: i.Member.User.AvatarURL(""),
+	embed := generateEmbed(i, []*discordgo.MessageEmbedField{
+		{
+			Name:  "Letters Guessed",
+			Value: fmt.Sprintf("`%s`", strings.Join(guessedLetters, ", ")),
 		},
-		Title:       "Hangman",
-		Color:       0xFFA500,
-		Description: desc[lives],
-		Fields: []*discordgo.MessageEmbedField{
-			{
-				Name:  "Letters Guessed",
-				Value: fmt.Sprintf("`%s`", strings.Join(guessedLetters, ", ")),
-			},
-			{
-				Name:  "Game Over",
-				Value: fmt.Sprintf("You lost! The word was **%s**.", word),
-			},
+		{
+			Name:  "Game Over",
+			Value: fmt.Sprintf("You lost! The word was **%s**.", word),
 		},
-	}
+	})
 
 	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseUpdateMessage,
@@ -319,20 +344,3 @@ func Lost(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		log.Printf("Error updating message: %v", err)
 	}
 }
-
-// {
-// 	Name:  "Letters Guessed",
-// 	Value: "",
-// },
-// {
-// 	Name:  "Word (9)",
-// 	Value: "🔵 🔵 🇪 🔵 🔵 🔵 🔵 🔵 🔵",
-// },
-// {
-// 	Name:  "Game Over",
-// 	Value: "You lost! The word was **partner**.",
-// },
-// {
-// 	Name:  "Game Over",
-// 	Value: "You won! The word was **partner**.",
-// }
