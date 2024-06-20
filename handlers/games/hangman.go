@@ -47,7 +47,7 @@ var (
 	word                  string
 	correctGuessedLetters = []string{}
 	blanks                = []string{}
-	words                 = []string{"golang", "js", "php"}
+	// words                 = []string{"golang", "js", "php"}
 )
 
 func HangmanGame(s *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -59,7 +59,7 @@ func HangmanGame(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	correctGuessedLetters = []string{}
 	currentState = "firstButtons"
 
-	word = words[rand.Intn(len(words))]
+	word = Words[rand.Intn(len(Words))]
 
 	for range word {
 		blanks = append(blanks, "🔵 ")
@@ -67,6 +67,7 @@ func HangmanGame(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	}
 
 	var embed discordgo.MessageEmbed
+	var responseComponents []discordgo.MessageComponent
 
 	switch selectedLang {
 	case "en":
@@ -76,6 +77,7 @@ func HangmanGame(s *discordgo.Session, i *discordgo.InteractionCreate) {
 				Value: strings.Join(blanks, ""),
 			},
 		})
+		responseComponents = generateFirstButtons()
 	case "ua":
 		embed = discordgo.MessageEmbed{
 			Title:       "Гра у Вісіліцю",
@@ -96,7 +98,7 @@ func HangmanGame(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
 			Embeds:     []*discordgo.MessageEmbed{&embed},
-			Components: generateFirstButtons(),
+			Components: responseComponents,
 		},
 	}
 

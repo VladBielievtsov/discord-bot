@@ -57,10 +57,10 @@ func main() {
 							Name:  "English",
 							Value: "en",
 						},
-						// {
-						// 	Name:  "Ukraine",
-						// 	Value: "ua",
-						// },
+						{
+							Name:  "Ukraine",
+							Value: "ua",
+						},
 					},
 				},
 			},
