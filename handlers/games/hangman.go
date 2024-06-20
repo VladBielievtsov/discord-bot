@@ -2,6 +2,7 @@ package games
 
 import (
 	"fmt"
+	"go-discord-bot/utils"
 	"log"
 	"math/rand"
 	"strings"
@@ -159,13 +160,14 @@ func generateSecondButtons() []discordgo.MessageComponent {
 }
 
 func generateEmbed(i *discordgo.InteractionCreate, fields []*discordgo.MessageEmbedField) discordgo.MessageEmbed {
+	c := utils.Colors[rand.Intn(len(utils.Colors))]
 	return discordgo.MessageEmbed{
 		Author: &discordgo.MessageEmbedAuthor{
 			Name:    i.Member.User.Username,
 			IconURL: i.Member.User.AvatarURL(""),
 		},
 		Title:       "Hangman",
-		Color:       0xFFA500,
+		Color:       c,
 		Description: desc[lives],
 		Fields:      fields,
 	}
