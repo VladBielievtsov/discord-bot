@@ -41,7 +41,7 @@ func main() {
 	commands := []*discordgo.ApplicationCommand{
 		{
 			Name:        "hello",
-			Description: "Say hello",
+			Description: "Say hello.",
 		},
 		{
 			Name:        "hangman",
@@ -50,7 +50,7 @@ func main() {
 				{
 					Type:        discordgo.ApplicationCommandOptionString,
 					Name:        "language",
-					Description: "Select a language",
+					Description: "Select a language.",
 					Required:    true,
 					Choices: []*discordgo.ApplicationCommandOptionChoice{
 						{
@@ -67,12 +67,24 @@ func main() {
 		},
 		{
 			Name:        "calculate",
-			Description: "Calculate a math expression",
+			Description: "Calculate a math expression.",
 			Options: []*discordgo.ApplicationCommandOption{
 				{
 					Type:        discordgo.ApplicationCommandOptionString,
 					Name:        "expression",
 					Description: "The math expression to calculate",
+					Required:    true,
+				},
+			},
+		},
+		{
+			Name:        "play",
+			Description: "🎧 Add a song to the queue from a link or title.",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Type:        discordgo.ApplicationCommandOptionString,
+					Name:        "song",
+					Description: "Link or title of the song.",
 					Required:    true,
 				},
 			},
@@ -96,6 +108,8 @@ func main() {
 				games.HangmanGame(s, i)
 			case "calculate":
 				handlers.CalcHandler(s, i)
+			case "play":
+				handlers.PlayHandler(s, i)
 			}
 		}
 	})
