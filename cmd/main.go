@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go-discord-bot/internal/commands"
 	"go-discord-bot/internal/config"
+	"go-discord-bot/internal/types"
 	"go-discord-bot/internal/utils"
 	"os"
 	"os/signal"
@@ -14,6 +15,8 @@ import (
 
 	_ "github.com/lib/pq"
 )
+
+var songQueue = &types.Queue{}
 
 func main() {
 	err := godotenv.Load()
@@ -99,7 +102,7 @@ func main() {
 			case "calculate":
 				commands.Calc(s, i)
 			case "play":
-				commands.Play(s, i)
+				commands.Play(s, i, songQueue)
 			}
 		}
 	})
