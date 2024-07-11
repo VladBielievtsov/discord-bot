@@ -3,10 +3,15 @@ package handlers
 import (
 	"fmt"
 	"go-discord-bot/utils"
-	"time"
+	"io"
+	"os"
+	"path/filepath"
 
 	"github.com/Knetic/govaluate"
 	"github.com/bwmarrin/discordgo"
+	"github.com/google/uuid"
+
+	"github.com/kkdai/youtube/v2"
 )
 
 func HelloHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -87,8 +92,7 @@ func PlayHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		return
 	}
 
-	// playAudio()
-	time.Sleep(5 * time.Second)
+	playAudio(s, i, songLink)
 
 	s.ChannelMessageSend(i.ChannelID, "Finished playing")
 }
@@ -100,4 +104,61 @@ func respondWithError(s *discordgo.Session, i *discordgo.InteractionCreate, erro
 			Content: "Error: " + errorMsg,
 		},
 	})
+}
+
+func playAudio(s *discordgo.Session, i *discordgo.InteractionCreate, videoURL string) {
+	// Download Audio
+	client := youtube.Client{}
+
+	video, err := client.GetVideo(videoURL)
+	if err != nil {
+		respondWithError(s, i, "Error getting video: "+err.Error())
+		return
+	}
+
+	var audioFormat *youtube.Format
+	for _, format := range video.Formats {
+		if format.ItagNo == 140 {
+			audioFormat = &format
+			break
+		}
+	}
+
+	if audioFormat == nil {
+		respondWithError(s, i, "Audio format not found")
+		return
+	}
+
+	tempDir := "temp"
+	err = os.MkdirAll(tempDir, os.ModePerm)
+	if err != nil {
+		respondWithError(s, i, "Error creating directory: "+err.Error())
+		return
+	}
+
+	id := uuid.New().String()
+	fileName := id + ".m4a"
+
+	outFilePath := filepath.Join(tempDir, fileName)
+	outFile, err := os.Create(outFilePath)
+	if err != nil {
+		respondWithError(s, i, "Error creating file: "+err.Error())
+		return
+	}
+	defer outFile.Close()
+
+	stream, _, err := client.GetStream(video, audioFormat)
+	if err != nil {
+		respondWithError(s, i, "Error getting stream: "+err.Error())
+		return
+	}
+	defer stream.Close()
+
+	_, err = io.Copy(outFile, stream)
+	if err != nil {
+		respondWithError(s, i, "Error saving audio: "+err.Error())
+		return
+	}
+
+	fmt.Println("Audio downloaded successfully!")
 }
