@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
-	"go-discord-bot/handlers"
-	"go-discord-bot/handlers/games"
-	"go-discord-bot/utils"
+	"go-discord-bot/internal/commands"
+	"go-discord-bot/internal/config"
+	"go-discord-bot/internal/utils"
 	"os"
 	"os/signal"
 	"syscall"
@@ -19,26 +19,16 @@ func main() {
 	err := godotenv.Load()
 	utils.ErrorHandler(err)
 
-	token := os.Getenv("BOT_TOKEN")
-	if token == "" {
-		fmt.Println("BOT_TOKEN is not set in the environment variables")
-		return
-	}
+	config.LoadConfig()
 
-	sess, err := discordgo.New("Bot " + token)
+	sess, err := discordgo.New("Bot " + config.BotToken)
 	utils.ErrorHandler(err)
 
 	err = sess.Open()
 	utils.ErrorHandler(err)
 	defer sess.Close()
 
-	guildID := os.Getenv("Guild_ID")
-	if guildID == "" {
-		fmt.Println("Guild_ID is not set in the environment variables")
-		return
-	}
-
-	commands := []*discordgo.ApplicationCommand{
+	cmds := []*discordgo.ApplicationCommand{
 		{
 			Name:        "hello",
 			Description: "Say hello.",
@@ -91,25 +81,25 @@ func main() {
 		},
 	}
 
-	for _, v := range commands {
-		_, err := sess.ApplicationCommandCreate(sess.State.User.ID, guildID, v)
+	for _, v := range cmds {
+		_, err := sess.ApplicationCommandCreate(sess.State.User.ID, config.GuildID, v)
 		utils.ErrorHandler(err)
 	}
 
 	sess.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		switch i.Type {
 		case discordgo.InteractionMessageComponent:
-			games.HandleButtonInteraction(s, i)
+			commands.HandleButtonInteraction(s, i)
 		case discordgo.InteractionApplicationCommand:
 			switch i.ApplicationCommandData().Name {
 			case "hello":
-				handlers.HelloHandler(s, i)
+				commands.Hello(s, i)
 			case "hangman":
-				games.HangmanGame(s, i)
+				commands.HangmanGame(s, i)
 			case "calculate":
-				handlers.CalcHandler(s, i)
+				commands.Calc(s, i)
 			case "play":
-				handlers.PlayHandler(s, i)
+				commands.Play(s, i)
 			}
 		}
 	})

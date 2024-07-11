@@ -1,6 +1,6 @@
-package games
+package utils
 
-var Words = []string{"a",
+var Words = []string{
 	"ability",
 	"able",
 	"about",

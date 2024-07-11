@@ -1,56 +1,17 @@
-package handlers
+package commands
 
 import (
 	"fmt"
-	"go-discord-bot/utils"
 	"io"
 	"os"
 	"path/filepath"
 
-	"github.com/Knetic/govaluate"
 	"github.com/bwmarrin/discordgo"
 	"github.com/google/uuid"
-
 	"github.com/kkdai/youtube/v2"
 )
 
-func HelloHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Content: fmt.Sprintf("Hello %v", i.Member.User.Username),
-		},
-	})
-	utils.ErrorHandler(err)
-}
-
-// FIXME: If passing a non-mathematical expression like "hello" causes an error
-
-func CalcHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	expressionStr := i.ApplicationCommandData().Options[0].StringValue()
-
-	expression, err := govaluate.NewEvaluableExpression(expressionStr)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	result, err := expression.Evaluate(nil)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionResponseChannelMessageWithSource,
-		Data: &discordgo.InteractionResponseData{
-			Content: fmt.Sprintf("%s = %v", expression, result),
-		},
-	})
-	utils.ErrorHandler(err)
-}
-
-func PlayHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
+func Play(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	songLink := i.ApplicationCommandData().Options[0].StringValue()
 
 	guildID := i.GuildID
@@ -92,7 +53,7 @@ func PlayHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		return
 	}
 
-	playAudio(s, i, songLink)
+	DownloadAudio(s, i, songLink)
 
 	s.ChannelMessageSend(i.ChannelID, "Finished playing")
 }
@@ -106,7 +67,7 @@ func respondWithError(s *discordgo.Session, i *discordgo.InteractionCreate, erro
 	})
 }
 
-func playAudio(s *discordgo.Session, i *discordgo.InteractionCreate, videoURL string) {
+func DownloadAudio(s *discordgo.Session, i *discordgo.InteractionCreate, videoURL string) {
 	// Download Audio
 	client := youtube.Client{}
 
@@ -159,6 +120,4 @@ func playAudio(s *discordgo.Session, i *discordgo.InteractionCreate, videoURL st
 		respondWithError(s, i, "Error saving audio: "+err.Error())
 		return
 	}
-
-	fmt.Println("Audio downloaded successfully!")
 }

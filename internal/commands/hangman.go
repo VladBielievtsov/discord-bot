@@ -1,8 +1,8 @@
-package games
+package commands
 
 import (
 	"fmt"
-	"go-discord-bot/utils"
+	"go-discord-bot/internal/utils"
 	"log"
 	"math/rand"
 	"strings"
@@ -60,7 +60,7 @@ func HangmanGame(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	correctGuessedLetters = []string{}
 	currentState = "firstButtons"
 
-	word = Words[rand.Intn(len(Words))]
+	word = utils.Words[rand.Intn(len(utils.Words))]
 
 	for range word {
 		blanks = append(blanks, "🔵 ")
