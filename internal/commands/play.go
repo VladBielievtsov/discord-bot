@@ -5,11 +5,12 @@ import (
 	"go-discord-bot/internal/types"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
-	"time"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/google/uuid"
+	"github.com/jonas747/dca"
 	"github.com/kkdai/youtube/v2"
 )
 
@@ -89,23 +90,34 @@ func PlayNextInQueue(s *discordgo.Session, i *discordgo.InteractionCreate, queue
 		}
 	}
 
-	DownloadAudio(s, i, queueItem.VideoURL)
+	audioFile, err := DownloadAudio(queueItem.VideoURL)
+	if err != nil {
+		respondWithError(s, i, "Error downloading audio: "+err.Error())
+		return
+	}
+	fmt.Println("TEst 1")
+	err = PlayAudioFile(vc, audioFile)
+	if err != nil {
+		respondWithError(s, i, "Error playing audio: "+err.Error())
+		return
+	}
 
-	time.Sleep(5 * time.Second)
+	fmt.Println("TEst 2")
+
+	// time.Sleep(5 * time.Second)
 
 	s.ChannelMessageSend(i.ChannelID, "Finished playing")
 
 	PlayNextInQueue(s, i, queue)
 }
 
-func DownloadAudio(s *discordgo.Session, i *discordgo.InteractionCreate, videoURL string) {
+func DownloadAudio(videoURL string) (string, error) {
 	// Download Audio
 	client := youtube.Client{}
 
 	video, err := client.GetVideo(videoURL)
 	if err != nil {
-		respondWithError(s, i, "Error getting video: "+err.Error())
-		return
+		return "", fmt.Errorf("error getting video: %w", err)
 	}
 
 	var audioFormat *youtube.Format
@@ -117,40 +129,103 @@ func DownloadAudio(s *discordgo.Session, i *discordgo.InteractionCreate, videoUR
 	}
 
 	if audioFormat == nil {
-		respondWithError(s, i, "Audio format not found")
-		return
+		return "", fmt.Errorf("Audio format not found")
 	}
 
 	tempDir := "temp"
 	err = os.MkdirAll(tempDir, os.ModePerm)
 	if err != nil {
-		respondWithError(s, i, "Error creating directory: "+err.Error())
-		return
+		return "", fmt.Errorf("error creating directory: %w", err)
 	}
 
 	id := uuid.New().String()
-	fileName := id + ".m4a"
+	fileName := id + ".mp3"
 
 	outFilePath := filepath.Join(tempDir, fileName)
 	outFile, err := os.Create(outFilePath)
 	if err != nil {
-		respondWithError(s, i, "Error creating file: "+err.Error())
-		return
+		return "", fmt.Errorf("error creating file: %w", err)
 	}
 	defer outFile.Close()
 
 	stream, _, err := client.GetStream(video, audioFormat)
 	if err != nil {
-		respondWithError(s, i, "Error getting stream: "+err.Error())
-		return
+		return "", fmt.Errorf("error getting stream: %w", err)
 	}
 	defer stream.Close()
 
 	_, err = io.Copy(outFile, stream)
 	if err != nil {
-		respondWithError(s, i, "Error saving audio: "+err.Error())
-		return
+		return "", fmt.Errorf("error saving audio: %w", err)
 	}
+
+	opusFilePath := filepath.Join(tempDir, id+".opus")
+	cmd := exec.Command("ffmpeg", "-i", outFilePath, "-c:a", "libopus", "-b:a", "64k", opusFilePath)
+	err = cmd.Run()
+	if err != nil {
+		return "", fmt.Errorf("error converting to DCA: %w", err)
+	}
+
+	return opusFilePath, nil
+}
+
+func PlayAudioFile(vc *discordgo.VoiceConnection, filename string) error {
+	fmt.Println("Starting to play audio...")
+
+	err := vc.Speaking(true)
+	if err != nil {
+		return fmt.Errorf("failed to turn on mic: %w", err)
+	}
+	defer func() {
+		vc.Speaking(false)
+		fmt.Println("Stopped playing audio.")
+	}()
+
+	dcaFile, err := os.Open(filename)
+	if err != nil {
+		return fmt.Errorf("error opening DCA file: %w", err)
+	}
+	defer dcaFile.Close()
+
+	decoder := dca.NewDecoder(dcaFile)
+	if decoder == nil {
+		return fmt.Errorf("failed to create DCA decoder")
+	}
+
+	done := make(chan error)
+
+	go func() {
+		defer close(done)
+		for {
+			frame, err := decoder.OpusFrame()
+			if err == io.EOF {
+				done <- nil
+				return
+			} else if err != nil {
+				done <- fmt.Errorf("error decoding Opus frame: %w", err)
+				return
+			}
+
+			if !vc.Ready || vc.OpusSend == nil {
+				fmt.Println("Voice connection not ready or OpusSend channel is nil")
+				continue
+			}
+
+			vc.OpusSend <- frame
+			fmt.Println("Sent Opus frame")
+		}
+	}()
+
+	for err := range done {
+		if err != nil {
+			fmt.Println("Playback error:", err)
+			return fmt.Errorf("playback error: %w", err)
+		}
+	}
+
+	fmt.Println("Playback finished successfully")
+
+	return nil
 }
 
 func respondWithError(s *discordgo.Session, i *discordgo.InteractionCreate, errorMsg string) {
